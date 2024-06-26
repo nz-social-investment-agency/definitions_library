@@ -74,21 +74,15 @@ Parameters & Present values:
   Project schema = [DL-MAA20XX-YY]
 
 ---------------------------------------------------------------------------------------------------------------------------
-Column                         Description
-name                       
+Column name                     Description
 ------------------------------ --------------------------------------------------------------------------------------------
 snz_uid                        The unique STATSNZ person identifier for the individual in an emergency housing 
-
 data_source                    A tag signifying a source dataset description (hard-coded to "MSD")
-
 snz_msd_uid                    The unique MSD person identifier for the individual in an emergency housing
-
 start_date                     The start date for the emergency housing, i.e., the first day that the person applied for a 
                                 third tier benefit from MSD to stay at an emergency housing
-
 end_date                       The latest date for when the person last consecutively applied for emergency housing benefit
                                 from MSD for the current spell. 
-
 ----------------------------------------------------------------------------------------------------------------------------
 
 History (reverse order):
