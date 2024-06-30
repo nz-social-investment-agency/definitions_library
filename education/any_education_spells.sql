@@ -30,7 +30,7 @@ Inputs & Dependencies:
 - [IDI_Clean].[moe_clean].[targeted_training]
 - [IDI_Clean].[moe_clean].[tec_it_learner]
 Outputs:
-- [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education]
+- [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education]
 
 
 Notes:
@@ -48,7 +48,7 @@ Notes:
 
 Parameters & Present values:
   Current refresh = YYYYMM
-  Prefix = d2gP2_
+  Prefix = defn_
   Project schema = [DL-MAA20XX-YY]
   Earliest start date = '2006-01-01'
   Latest end date = '2026-12-31'
@@ -65,7 +65,7 @@ History (reverse order):
 2020-03-02 SA v1
 **************************************************************************************************/
 /* Clear staging table */
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education_staging];
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education_staging];
 GO
 
 
@@ -75,7 +75,7 @@ SELECT snz_uid
 	,'enrollment' AS [source]
 	,[moe_enr_prog_start_date] as [start_date]
 	,[moe_enr_prog_end_date] as [end_date]
-INTO [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education_staging]
+INTO [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education_staging]
 FROM [IDI_Clean_YYYYMM].[moe_clean].[enrolment]
 WHERE [moe_enr_prog_start_date] <= '2026-12-31'
 AND '2006-01-01' <= [moe_enr_prog_end_date]
@@ -104,11 +104,11 @@ AND [moe_itl_start_date] <= '2026-12-31'
 AND '2006-01-01' <= [moe_itl_end_date];
 GO
 
-CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education_staging] (snz_uid)
+CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education_staging] (snz_uid)
 GO
 
 /* Condensed spells */
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education];
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education];
 GO
 
 /* create table with condensed spells */
@@ -116,11 +116,11 @@ WITH
 /* exclude start dates that are within another spell */
 spell_starts AS (
 	SELECT [snz_uid], [start_date]
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education_staging] s1
+	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education_staging] s1
 	WHERE [start_date] <= [end_date]
 	AND NOT EXISTS (
 		SELECT 1
-		FROM [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education_staging] s2
+		FROM [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education_staging] s2
 		WHERE s1.snz_uid = s2.snz_uid
 		AND DATEADD(DAY, -1, s1.[start_date]) BETWEEN s2.[start_date] AND s2.[end_date]
 	)
@@ -128,11 +128,11 @@ spell_starts AS (
 /* exclude end dates that are within another spell */
 spell_ends AS (
 	SELECT [snz_uid], [end_date]
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education_staging] t1
+	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education_staging] t1
 	WHERE [start_date] <= [end_date]
 	AND NOT EXISTS (
 		SELECT 1 
-		FROM [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education_staging] t2
+		FROM [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education_staging] t2
 		WHERE t2.snz_uid = t1.snz_uid
 		AND YEAR(t1.[end_date]) <> 9999
 		AND DATEADD(DAY, 1, t1.[end_date]) BETWEEN t2.[start_date] AND t2.[end_date]
@@ -140,7 +140,7 @@ spell_ends AS (
 	)
 )
 SELECT s.snz_uid, s.[start_date], MIN(e.[end_date]) as [end_date]
-INTO [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education]
+INTO [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education]
 FROM spell_starts s
 INNER JOIN spell_ends e
 ON s.snz_uid = e.snz_uid
@@ -149,13 +149,13 @@ GROUP BY s.snz_uid, s.[start_date]
 GO
 
 /* Add index */
-CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education] (snz_uid);
+CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education] (snz_uid);
 GO
 /* Compress final table to save space */
-ALTER TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);
+ALTER TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);
 GO
 
 /* Clear staging table */
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_enrolled_education_staging];
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[defn_enrolled_education_staging];
 GO
 

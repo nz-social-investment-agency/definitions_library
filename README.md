@@ -1,5 +1,5 @@
 # IDI definitions library
-Definitions from the Social Investment Agency (proeviously Social Wellbeing Agency) projects in a single repository for ease of discovery. These definitions are intended to be compatible with the Dataset Assembly Tool.
+Definitions from the Social Investment Agency (previously Social Wellbeing Agency) projects in a single repository for ease of discovery. These definitions are intended to be compatible with the Dataset Assembly Tool.
 
 ## Overview
 The Dataset Assembly Tool encourages research projects to structure their input data into population and measures. The population is specific to a specific study and includes who is being studied and over what time period. The measures are not specific to a study. This means they can be reused across research projects.
