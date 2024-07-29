@@ -191,7 +191,7 @@ INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_anxiety_solo] (snz_uid, event_dat
 SELECT a.[snz_uid]
 		,[moh_pha_dispensed_date] AS event_date
 FROM [IDI_Clean_YYYYMM].[moh_clean].[pharmaceutical] AS a
-INNER JOIN [IDI_Metadata].[clean_read_CLASSIFICATIONS].[moh_dim_form_pack_subsidy_code] AS b
+INNER JOIN [IDI_Metadata].[clean_read_CLASSIFICATIONS].[moh_pharmaceutical_lookup] AS b
 ON a.[moh_pha_dim_form_pack_code] = b.[DIM_FORM_PACK_SUBSIDY_KEY]
 WHERE EXISTS (
 	SELECT 1
@@ -207,7 +207,7 @@ INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_anxiety_multi] (snz_uid, event_da
 SELECT a.[snz_uid]
 		,[moh_pha_dispensed_date] AS event_date
 FROM [IDI_Clean_YYYYMM].[moh_clean].[pharmaceutical] AS a
-INNER JOIN [IDI_Metadata].[clean_read_CLASSIFICATIONS].[moh_dim_form_pack_subsidy_code] AS b
+INNER JOIN [IDI_Metadata].[clean_read_CLASSIFICATIONS].[moh_pharmaceutical_lookup] AS b
 ON a.[moh_pha_dim_form_pack_code] = b.[DIM_FORM_PACK_SUBSIDY_KEY]
 WHERE EXISTS (
 	SELECT 1
