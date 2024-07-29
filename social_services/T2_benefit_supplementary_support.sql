@@ -3,6 +3,8 @@ Title: T2 benefit receipt by type
 Author: Michael Hackney and Simon Anastasiadis, et. al. (HaBiSA project), 
 Reviewer: Simon Anastasiadis, AK
 
+Superseded by Code Module: https://idcommons.discourse.group/pub/msd-income-support-payments
+
 Acknowledgements:
 Informatics for Social Services and Wellbeing (terourou.org) supported the publishing of these definitions
 

@@ -2,6 +2,8 @@
 Title: Migration date to New Zealand
 Author: Simon Anastasiadis
 
+Superseded by Code Module: https://idcommons.discourse.group/pub/migration-spells
+
 Acknowledgements:
 Informatics for Social Services and Wellbeing (terourou.org) supported the publishing of these definitions
 
