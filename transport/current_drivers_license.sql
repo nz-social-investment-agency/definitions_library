@@ -2,6 +2,8 @@
 Title: Crude indication of drivers license
 Author: Simon Anastasiadis
 
+Superseded by Code Module: https://idcommons.discourse.group/pub/driver-licence-status
+
 Inputs & Dependencies:
 - [IDI_Clean].[nzta_clean].[drivers_licence_register]
   from refreshes: 20200120, 20191020, 20190420, 20181020, 20180720, 20180420, 20171020

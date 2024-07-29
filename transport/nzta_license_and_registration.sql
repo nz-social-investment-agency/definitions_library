@@ -2,6 +2,8 @@
 Title: Driver licensing and vehicle registration
 Author: Joel Bancolita
 
+Partially superseded by Code Module: https://idcommons.discourse.group/pub/driver-licence-status
+
 Acknowledgements:
 Informatics for Social Services and Wellbeing (terourou.org) supported the publishing of these definitions
 

@@ -3,6 +3,8 @@ Title: Attainment of qualification
 Author: Simon Anastasiadis
 Re-edit: Freya Li
 
+Superseded by Code Module: https://idcommons.discourse.group/pub/educational-attainment-landing-page
+
 Acknowledgements:
 Informatics for Social Services and Wellbeing (terourou.org) supported the publishing of these definitions
 

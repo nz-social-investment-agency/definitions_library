@@ -3,6 +3,8 @@ Title: First arrival in New Zealand
 Author: Luke Scullion
 Reviewer: Shaan Badenhorst
 
+Superseded by Code Module: https://idcommons.discourse.group/pub/migration-spells
+
 Acknowledgements:
 Informatics for Social Services and Wellbeing (terourou.org) supported the publishing of these definitions
 
