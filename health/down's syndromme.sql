@@ -12,7 +12,10 @@ Inputs & Dependencies:
 
 Outputs:
 	[IDI_Sandpit].[DL-MAA2023-46].[downs_syndromme]
+	
 Description:
+	Observed evidence of Down's syndrome
+	
 
 Notes:
 - code congenital heart deffects, birth weight and maternal age, and ID and IDD

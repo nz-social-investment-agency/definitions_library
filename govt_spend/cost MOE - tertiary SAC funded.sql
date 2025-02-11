@@ -3,7 +3,7 @@ Title: Costs- Tertiary SAC funded
 Author: Craig Wright
 
 Inputs & Dependencies:
-	[IDI_CLEAN_202410].[MOE_CLEAN].[ENROLMENT]
+	[IDI_Clean_202410].[moe_clean].[enrolment]
 Outputs:
 	[IDI_Sandpit].[DL-MAA2023-46].[defn_cost_
 
@@ -11,7 +11,7 @@ Description:
 	Enrollment in Tertiary study eligable for government funding
 
 Notes:
-- No costs in this definitin right now
+- No costs in this definition right now
 	A method was designed but not currently relevant
 
 Parameters & Present values:

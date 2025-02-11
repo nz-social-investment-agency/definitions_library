@@ -17,7 +17,8 @@ Outputs:
 	[IDI_Sandpit].[DL-MAA2023-46].[epilepsy]
 
 Description:
-
+	Observed evidence of Epilepsy
+	
 Notes:
 - Childhood onset
 - Likely limited to serious events where treatement is affected by epilepsy or status epilepsyticus
