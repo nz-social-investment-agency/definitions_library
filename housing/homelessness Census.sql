@@ -6,12 +6,10 @@ Description:
 Homelessness, including temporary accomodation
 
 Inputs & Dependencies:
-	[IDI_METADATA].[CLEAN_READ_CLASSIFICATIONS].[CEN_OCCDWELTYPE]
-	[IDI_CLEAN_202403].[CEN_CLEAN].[CENSUS_DWELLING_2018]
-	[IDI_CLEAN_202403].[DATA].[ADDRESS_NOTIFICATION_FULL]
-	[IDI_METADATA].[CLEAN_READ_CLASSIFICATIONS].[CEN_OCCDWELTYPE]
-	[IDI_CLEAN_20211020].[CEN_CLEAN].[CENSUS_DWELLING_2018]
-	[IDI_METADATA].[CLEAN_READ_CLASSIFICATIONS].[BR_ANZSIC06]
+	[IDI_Metadata].[clean_read_CLASSIFICATIONS].[CEN_OCCDWELTYPE]
+	[IDI_Clean_202403].[cen_clean].[census_dwelling_2018]
+	[IDI_Clean_202403].[data].[address_notification_full]
+	[IDI_Clean_202403].[data].[personal_detail]
 Outputs:
 	#add_type
 	

@@ -16,7 +16,7 @@ Outputs:
 
 Description:
 Indicators of whether a young person (under 18) has previous had, at any point in their life to date:
-- an investigation following from a report of concern to TO
+- an investigation following from a report of concern to OT
 - a family group conference (following investigation of a RoC, or following a Youth Justice interaction)
 - a placement (including where placed with whanau, or remaining in current residence but while under legal custody of OT)
 

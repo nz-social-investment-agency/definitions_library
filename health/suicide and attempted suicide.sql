@@ -21,7 +21,7 @@ Outputs:
 	[IDI_Sandpit].[DL-MAA2023-46].[suicide_or_attempted]
 
 Description:
-	All attempted suicide and completed suicide
+	All observed attempted suicide and completed suicide
 
 Notes:
 - Sources reviewed:

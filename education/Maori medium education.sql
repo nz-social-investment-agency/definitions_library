@@ -6,7 +6,7 @@ Description:
 Enrollment at school with indication that education is Maori medium.
 
 Inputs & Dependencies:
-	[IDI_Adhoc].[clean_read_MOE].[School_Roll_Return_2012]
+	[IDI_Adhoc].[clean_read_MOE].[School_Roll_Return_20**]
 Outputs:
 	{none}
 

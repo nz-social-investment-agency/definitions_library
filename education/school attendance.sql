@@ -6,7 +6,8 @@ Description:
 School attendance divided into three categories: Present, Justified absence, Unjustified absence
 
 Inputs & Dependencies:
-
+	[IDI_Clean_202410].[moe_clean].[school_student_attendance]
+	[IDI_Metadata].[clean_read_CLASSIFICATIONS].[moe_attendance_codes]
 Outputs:
 	[IDI_Sandpit].[DL-MAA2023-46].[defn_school_days_attendance]
 

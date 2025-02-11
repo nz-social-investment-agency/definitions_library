@@ -3,18 +3,20 @@ Title: Attention Deficit Hyperactivity Disorder (ADHD)
 Author: Craig Wright
 
 Inputs & Dependencies:
-	[IDI_SANDPIT].[DL-MAA2023-46].CW_202410_ADHD 
-	[IDI_CLEAN_202410].[MOH_CLEAN].[MORTALITY_DIAGNOSIS]
-	[IDI_CLEAN_202410].[MOH_CLEAN].[PHARMACEUTICAL]
-	[IDI_CLEAN_202410].[MOH_CLEAN].[PRIV_FUND_HOSP_DISCHARGES_EVENT]
-	[IDI_CLEAN_202410].[MOH_CLEAN].[PUB_FUND_HOSP_DISCHARGES_DIAG]
-	[IDI_ADHOC].[CLEAN_READ_MOH_PRIMHD].[MOH_PRIMHD_MHINC]
-	[IDI_ADHOC].[CLEAN_READ_MOH_PRIMHD].[PRIMHD_DIAGNOSES_202312]
-	[IDI_ADHOC].[CLEAN_READ_MOH_SOCRATES].MOH_DISABILITY_2022
-	[IDI_CLEAN_202410].[SECURITY].[CONCORDANCE]
-	[IDI_ADHOC].[CLEAN_READ_MOH_SOCRATES].[MOH_NEEDS_ASSESSMENT_2022]
-	[IDI_ADHOC].[CLEAN_READ_MOH_SOCRATES].[MOH_REFERRAL_2022] 
-	[IDI_ADHOC].[CLEAN_READ_CYF].[CYF_GATEWAY_CLI_NEEDS]
+	[IDI_Clean_202410].[moh_clean].[mortality_diagnosis]
+	[IDI_Clean_202410].[moh_clean].[mortality_registrations]
+	[IDI_Clean_202410].[moh_clean].[pharmaceutical]
+	[IDI_Clean_202410].[moh_clean].[priv_fund_hosp_discharges_event]
+	[IDI_Clean_202410].[moh_clean].[priv_fund_hosp_discharges_diag]
+	[IDI_Clean_202410].[moh_clean].[pub_fund_hosp_discharges_diag]
+	[IDI_Clean_202410].[moh_clean].[pub_fund_hosp_discharges_event]
+	[IDI_Metadata_202410].moh_pharm.dim_form_pack_subsidy_code
+	[IDI_Clean_202410].[security].[concordance]
+	[IDI_Adhoc].[clean_read_MOH_SOCRATES].[moh_needs_assessment_2022]
+	[IDI_Adhoc].[clean_read_MOH_SOCRATES].[moh_referral_2022]
+	[IDI_Adhoc].[clean_read_CYF].[cyf_gateway_cli_needs]
+	[IDI_Adhoc].[clean_read_MOH_PRIMHD].[moh_primhd_mhinc]
+	[IDI_Adhoc].[clean_read_MOH_SOCRATES].moh_disability_2022
 
 Outputs:
 	[IDI_Sandpit].[DL-MAA2023-46].[defn_ADHD]
@@ -322,7 +324,7 @@ SELECT b.snz_uid
       --,[health_yn]
 INTO #gateway
 FROM [IDI_Adhoc].[clean_read_CYF].[cyf_gateway_cli_needs] AS a
-    , idi_clean_202410.security.concordance AS b
+    , [IDI_Clean_202410].[security].[concordance] AS b
 WHERE a.snz_msd_uid = b.snz_msd_uid
 AND need_type_code IN ('ATT228','HYP110')
 
