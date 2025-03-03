@@ -41,6 +41,8 @@ Parameters & Present values:
  
 Issues:
 - Method for handling of large direct costs is still under discussion with subject matter experts.
+   Current advice is that these are caused by an error in data provision into the IDI,
+   The recommended temporary solution is to discard any costs with a high daily rate.
 - Indirect costs are considered outdated by subject matter experts.
 
 History (reverse order):
