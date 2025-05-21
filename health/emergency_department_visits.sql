@@ -13,7 +13,7 @@ to what extent the definitions provided here are suitable for reuse in their pro
 this library as a resource to support IDI research, it provides no guarantee that these definitions are fit for reuse.
 
 Citation:
-Social Wellbeing Agency. Definitions library. Source code. https://github.com/nz-social-wellbeing-agency/definitions_library
+Social Investment Agency. Definitions library. Source code. https://github.com/nz-social-investment-agency/definitions_library
 
 Description:
 ED visits as recorded in the National Non-admitted Patient Collection.
@@ -24,7 +24,7 @@ Identify ED visit events
 Inputs & Dependencies:
 - [IDI_Clean].[moh_clean].[nnpac]
 Outputs:
-- [IDI_Sandpit].[DL-MAA20XX-YY].[SWA_emergency_department]
+- [IDI_Sandpit].[DL-MAA20XX-YY].[SIA_emergency_department]
 
 
 Notes: 
@@ -32,20 +32,22 @@ Notes:
 In New Zealand, emergency departments (EDs) provide care and treatment for patients with real or perceived, serious injuries or illness.
 We use ED visits as recorded in the National Non-admitted Patient Collection (NNPAC).
 
+Results have been tested against Te Whatu Ora's clinical performance metrics, noting slight differences as the published measure looks at ED presentations (includes DNW, DNA), where
+this code looks at ED visits (only those who attended).
+
 Inclusion Criteria
 
 The Ministry of Health has defined an inclusion criteria which defines an emergency department visit
 which is recorded with the National Non-admitted Patient Collection (NNPAC).
 Inclusion criteria as described in: www.health.govt.nz/publication/emergency-department-use-2014-15
 See page 34.
-•	had one of the ED codes specified as the purchase unit code (ED02001-ED06001A)
-•	were completed (ie, excludes events where the patient did not wait to complete)
-•	do not include follow-up appointments
+â€¢	had one of the ED codes specified as the purchase unit code (version 30, 2025)
+â€¢	were completed (ie, excludes events where the patient did not wait to complete)
+â€¢	do not include follow-up appointments
 
-The following ED purchase unit codes have been included:
-ED02001, ED02001A, ED03001, ED03001A,
-ED04001, ED04001A, ED05001, ED05001A,
-ED06001, ED06001A
+Purchase order codes included are listed in: www.tewhatuora.govt.nz/health-services-and-programmes/nationwide-service-framework-library/purchase-units#current-purchase-unit-data-dictionary
+Version 30 as at May 2025
+Major service group = ED
 
 As per Craig Wright's advice:
 because we are only interested in counting events, we do not need to
@@ -57,7 +59,9 @@ Variable definitions
 
 moh_nnp_purchase_unit_code: A purchase unit code is part of a classification system used to consistently measure, quantify and value a service.
 The definition for each purchase unit code can be found in the Purchase unit dictionary at:
-www.nsfl.health.govt.nz/purchase-units/purchase-unit-data-dictionary-202223
+https://www.tewhatuora.govt.nz/health-services-and-programmes/nationwide-service-framework-library/purchase-units#current-purchase-unit-data-dictionary
+Version 30 as at May 2025
+Major service group = ED
 
 moh_nnp_attendence_code: Attendance code for the outpatient event. Notes: 
 ATT (Attended) - An attendance is where the healthcare user is assessed by a registered medical 
@@ -81,9 +85,11 @@ Parameters & Present values:
   Project schema = [$(PROJSCH)]
  
 Issues:
- 
+
+
 History (reverse order):
 Simon Anastasiadis: 2019-01-08
+Charlotte Rose: 2025-05-22 - Update for 2025 Version 30 purcahde unit codes. Added purchase unit code MS02019 and ED% to allow for future ED purchase order codes to be added
 
 **************************************************************************************************/
 --PARAMETERS##################################################################################################
@@ -109,9 +115,8 @@ SELECT DISTINCT [snz_uid]
 	  ,'moh nnpac' as [source]
 FROM [$(IDIREF)].[moh_clean].[nnpac]
 WHERE [moh_nnp_event_type_code] = 'ED'
-AND [moh_nnp_purchase_unit_code] IN ('ED02001', 'ED02001A', 'ED03001', 'ED03001A',
-									 'ED04001', 'ED04001A', 'ED05001', 'ED05001A',
-									 'ED06001', 'ED06001A')
+AND ([moh_nnp_purchase_unit_code] LIKE 'ED%'
+	OR = 'MS02019')					 
 AND [moh_nnp_service_date] IS NOT NULL
 AND [moh_nnp_service_type_code] <> 'FU' /*do not include "follow-up" (FU) appointments. 
 --See 'inclusion criteria' on page 34 of: www.health.govt.nz/publication/emergency-department-use-2014-15*/
