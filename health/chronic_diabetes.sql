@@ -31,7 +31,7 @@ Inputs & Dependencies:
 - [IDI_Clean].[moh_clean].[pharmaceutical]
 - [IDI_Metadata].[clean_read_CLASSIFICATIONS].[moh_dim_form_pack_subsidy_code]
 Outputs:
-- [IDI_Sandpit].[DL-MAA20XX-YY].[defn_chronic_coronary_heart_disease]
+- [IDI_Sandpit].[DL-MAA20XX-YY].[defn_chronic_diabetes]
 
  
 Notes:
