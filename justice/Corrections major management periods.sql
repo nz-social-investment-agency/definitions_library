@@ -203,13 +203,13 @@ SELECT d.[snz_uid]
     ,d.[snz_jus_uid]
     ,[cor_dir_directive_type_text]
     ,IIF([cor_dir_management_start_date] <= [cor_mus_muster_start_date], [cor_mus_muster_start_date], [cor_dir_management_start_date]) AS later_start -- [cor_dir_management_start_date]
-    ,IIF([cor_dir_management_end_date] <= [cor_mus_muster_end_date], [cor_dir_management_end_date], [cor_mus_muster_end_date]) AS earlier_end -- [cor_dir_management_end_date]
+    ,IIF([cor_dir_management_end_date] <= COALESCE(m.[cor_mus_muster_end_date], GETDATE()), [cor_dir_management_end_date], COALESCE(m.[cor_mus_muster_end_date], GETDATE())) AS earlier_end -- [cor_dir_management_end_date]
 FROM [IDI_Clean_202506].[cor_clean].[directive] AS d
 INNER JOIN [IDI_Clean_202506].[cor_clean].[muster] AS m
 ON d.snz_uid = m.snz_uid
 AND d.snz_jus_uid = m.snz_jus_uid
 -- overlap
-AND d.[cor_dir_management_start_date] <= m.[cor_mus_muster_end_date]
+AND d.[cor_dir_management_start_date] <= COALESCE(m.[cor_mus_muster_end_date], GETDATE())
 AND m.[cor_mus_muster_start_date] <= d.[cor_dir_management_end_date]
 WHERE [cor_dir_directive_type_text] IN ('OTHER IMPRISONMENT', 'REMAND (ACCUSED / CONVICTED)')
 AND [cor_dir_management_start_date] <= [cor_dir_management_end_date]
@@ -505,3 +505,4 @@ ON a.start_year = c.start_year
 AND a.cor_mmp_mmc_code = c.cor_mmp_mmc_code
 WHERE a.cor_mmp_mmc_code NOT IN ('ALIVE', 'AGED_OUT')
 */
+
