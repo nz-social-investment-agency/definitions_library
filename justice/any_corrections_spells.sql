@@ -27,7 +27,7 @@ Intended purpose:
 Inputs & Dependencies:
 - [IDI_Clean].[cor_clean].[ov_major_mgmt_periods]
 Outputs:
-- [IDI_UserCode].[DL-MAA20XX-YY].[d2gP2_corrections_any]
+- [IDI_UserCode].[DL-MAA2023-46].[defn_corrections_any]
  
 Notes:
 1) Corrections management includes prison sentences (PRISON), remanded in custody (REMAND),
@@ -52,18 +52,19 @@ Notes:
    resolved using [cor_mmp_max_period_nbr]. Best estimates for the size of this group is <0.1%
    of the population. We have left these duplicate records in place.
 6) One day is subtracted from the end date to ensure periods are non-overlapping.
+7) From March 2022 refresh, the input table to this definition changed.
+	[ov_major_mgmt_periods] is now [ov_major_mgmt_periods_historic]
+	And we use its replacement: [ra_ofndr_major_mgmt_period_a]
 
 Parameters & Present values:
-  Current refresh = YYYYMM
-  Prefix = d2g_
-  Project schema = [DL-MAA20XX-YY]
+  Current refresh = 202506
+  Prefix = defn_
+  Project schema = [DL-MAA2023-46]
  
 Issues:
-1) Starting with the March 2022 refresh, the input table [ov_major_mgmt_periods] is no longer
-   being updated and new tables have been introduced. Definition will need updating to use
-   these new tables for research studying the most recent time periods.
  
 History (reverse order):
+2024-08-07 SA update for change to ra_ofndr_major_mgmt_period_a
 2021-06-04 FL update the input table to the latest reference
 2020-07-22 JB QA
 2020-07-16 MP QA
@@ -75,34 +76,19 @@ USE IDI_UserCode
 GO
 
 /* Clear existing view */
-DROP VIEW IF EXISTS [DL-MAA20XX-YY].[d2gP2_corrections_any];
+DROP VIEW IF EXISTS [DL-MAA2023-46].[defn_corrections_any_202506]
 GO
 
 /* Create view */
-CREATE VIEW [DL-MAA20XX-YY].[d2gP2_corrections_any] AS
+CREATE VIEW [DL-MAA2023-46].[defn_corrections_any_202506] AS
 SELECT a.snz_uid
-	,a.cor_mmp_prev_mmc_code
-	,a.cor_mmp_mmc_code
-	,a.cor_mmp_next_mmc_code
-	,a.cor_mmp_index_offence_code
-	,a.cor_mmp_imposed_sentence_length_nbr
-	,a.cor_mmp_sentence_location_text
-	,a.cor_mmp_period_start_date AS [start_date]
-	,DATEADD(DAY, -1, a.cor_mmp_period_end_date) AS [end_date]
-FROM  [IDI_Clean_YYYYMM].[cor_clean].[ov_major_mgmt_periods] a
-INNER JOIN (
-	SELECT snz_uid, MAX(cor_mmp_max_period_nbr) AS cor_mmp_max_period_nbr
-	FROM  [IDI_Clean_YYYYMM].[cor_clean].[ov_major_mgmt_periods]
-	GROUP BY snz_uid
-) b
-ON a.snz_uid = b.snz_uid
-AND a.cor_mmp_max_period_nbr = b.cor_mmp_max_period_nbr
-WHERE [cor_mmp_mmc_code] NOT IN ('AGED_OUT', 'ALIVE', 'ERROR', 'NA')
-AND cor_mmp_period_start_date IS NOT NULL
-AND cor_mmp_period_end_date IS NOT NULL
-AND cor_mmp_period_start_date <= cor_mmp_period_end_date;
+	,a.mm_type AS [cor_rommp_directive_type]
+	,a.[start_date]
+	,DATEADD(DAY, -1, a.[end_date]) AS [end_date]
+FROM [SIA_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods_202506] AS a
+WHERE --mm_type NOT IN ('') AND -- 
+ [start_date] IS NOT NULL
+AND [end_date] IS NOT NULL
+-- AND [cor_rommp_period_start_date] <= [cor_rommp_period_end_date] -- this check is already performed in the new defintion
 GO
-
-
-
 

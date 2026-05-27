@@ -14,7 +14,7 @@ Inputs & Dependencies:
 	[IDI_Clean].[cor_clean].[directive]
 	[IDI_Clean].[cor_clean].[muster]
 Outputs:
-	[IDI_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods]
+	[SIA_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods]
  
 Definition notes:
 - Between the 202503 and 202506 refreshes, the Corrections updated the way they provided
@@ -122,6 +122,7 @@ Parameters & Present values:
 Issues:
  
 History (reverse order):
+2025-08-06 SA update to missing end dates from the source data
 2025-07-04 SA v1
 **************************************************************************************************/
 
@@ -132,10 +133,10 @@ History (reverse order):
 -- Mapping of 202506 types to 202503 types done manually based raw text.
 -- Rank column is used to determine which directive has precedence if several apply.
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_codes]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_codes]
 GO
 
-CREATE TABLE [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_codes] (
+CREATE TABLE [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_codes] (
 	MMC_historic_code VARCHAR(10)
 	,MMC_Description VARCHAR(40)
 	,MMC_Rank INT NOT NULL
@@ -143,7 +144,7 @@ CREATE TABLE [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_codes] (
 	,MMC_202503_code VARCHAR(40)
 )
 
-INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_codes] VALUES
+INSERT INTO [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_codes] VALUES
 ('ERROR', 'Period code not properly handled', 1, '', ''),
 ('PRISON', '', 8, 'LIFE IMPRISONMENT', ''),
 ('PRISON', '', 9, 'PREVENTIVE DETENTION [IMPRISONMENT]', ''),
@@ -168,7 +169,7 @@ INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_codes] VALUES
 --------------------------------------------------------------------------------
 -- (1) initialise experienced directives table
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
 GO
 
 SELECT TOP 0 [snz_uid]
@@ -176,14 +177,14 @@ SELECT TOP 0 [snz_uid]
     ,[cor_dir_directive_type_text]
     ,[cor_dir_management_start_date]
     ,[cor_dir_management_end_date]
-INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
+INTO [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
 FROM [IDI_Clean_202506].[cor_clean].[directive]
 GO
 
 --------------------------------------------------------------------------------
 -- (2) populate non-muster directives
 
-INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
+INSERT INTO [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
 SELECT [snz_uid]
     ,[snz_jus_uid]
     ,[cor_dir_directive_type_text]
@@ -198,7 +199,7 @@ GO
 --------------------------------------------------------------------------------
 -- (3) populate muster directives
 
-INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
+INSERT INTO [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
 SELECT d.[snz_uid]
     ,d.[snz_jus_uid]
     ,[cor_dir_directive_type_text]
@@ -216,53 +217,53 @@ AND [cor_dir_management_start_date] <= [cor_dir_management_end_date]
 AND [cor_dir_management_start_date] BETWEEN '1920-01-01' AND GETDATE()
 GO
 
-CREATE NONCLUSTERED INDEX i_uid ON [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives] (snz_uid)
+CREATE NONCLUSTERED INDEX i_uid ON [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives] (snz_uid)
 GO
 
 --------------------------------------------------------------------------------
 -- (4) construct all applicable date ranges
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_all_dates]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_all_dates]
 GO
 
 SELECT DISTINCT *
-INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_all_dates]
+INTO [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_all_dates]
 FROM (
 	SELECT snz_uid
 		,snz_jus_uid
 		,cor_dir_management_start_date AS ref_date
-	FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
+	FROM [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
 
 	UNION ALL
 
 	SELECT snz_uid
 		,snz_jus_uid
 		,cor_dir_management_end_date AS ref_date
-	FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
+	FROM [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
 ) AS k
 GO
 
-CREATE NONCLUSTERED INDEX i_uid ON [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_all_dates] (snz_uid, snz_jus_uid) INCLUDE (ref_date)
+CREATE NONCLUSTERED INDEX i_uid ON [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_all_dates] (snz_uid, snz_jus_uid) INCLUDE (ref_date)
 GO
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges]
 GO
 
 SELECT snz_uid
 	,snz_jus_uid
 	,ref_date AS [start_date]
 	,LEAD(ref_date, 1, '9999-12-31') OVER (PARTITION BY snz_uid, snz_jus_uid ORDER BY ref_date) AS [end_date]
-INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges]
-FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_all_dates]
+INTO [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges]
+FROM [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_all_dates]
 GO
 
-CREATE NONCLUSTERED INDEX i_uid ON [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges] (snz_uid, snz_jus_uid) INCLUDE ([start_date], [end_date])
+CREATE NONCLUSTERED INDEX i_uid ON [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges] (snz_uid, snz_jus_uid) INCLUDE ([start_date], [end_date])
 GO
 
 --------------------------------------------------------------------------------
 -- (5) identify management type options of each date range
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges_w_management_type]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges_w_management_type]
 GO
 
 SELECT d.snz_uid
@@ -274,26 +275,26 @@ SELECT d.snz_uid
 	,e.cor_dir_management_end_date
 	,c.MMC_202503_code
 	,c.MMC_Rank
-INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges_w_management_type]
-FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges] AS d
-INNER JOIN [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives] AS e
+INTO [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges_w_management_type]
+FROM [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges] AS d
+INNER JOIN [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives] AS e
 ON d.snz_uid = e.snz_uid
 AND d.snz_jus_uid = e.snz_jus_uid
 -- overlap but exclude overlap on end date
 -- (use < instead of <= because this period end is next period start)
 AND d.[start_date] < e.cor_dir_management_end_date
 AND e.cor_dir_management_start_date < d.[end_date]
-INNER JOIN [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_codes] AS c
+INNER JOIN [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_codes] AS c
 ON e.[cor_dir_directive_type_text] = c.MMC_202506_code
 GO
 
-CREATE NONCLUSTERED INDEX i_uid ON [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges_w_management_type] (snz_uid, snz_jus_uid, [start_date], end_date) INCLUDE (MMC_Rank)
+CREATE NONCLUSTERED INDEX i_uid ON [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges_w_management_type] (snz_uid, snz_jus_uid, [start_date], end_date) INCLUDE (MMC_Rank)
 GO
 
 --------------------------------------------------------------------------------
 -- (6) identify single management type of each date range
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type]
 GO
 
 SELECT snz_uid
@@ -301,18 +302,18 @@ SELECT snz_uid
 	, [start_date]
 	, [end_date]
 	, MIN(MMC_Rank) AS MMC_Rank
-INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type]
-FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges_w_management_type]
+INTO [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type]
+FROM [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges_w_management_type]
 GROUP BY snz_uid, snz_jus_uid, [start_date], [end_date]
 GO
 
-CREATE NONCLUSTERED INDEX i_uid ON [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type] (snz_uid, snz_jus_uid, MMC_Rank)
+CREATE NONCLUSTERED INDEX i_uid ON [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type] (snz_uid, snz_jus_uid, MMC_Rank)
 GO
 
 --------------------------------------------------------------------------------
 -- (7) merge adjacent management types
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_merge]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_merge]
 GO
 
 WITH
@@ -322,10 +323,10 @@ possible_starts AS (
 		,snz_jus_uid
 		,MMC_Rank
 		,[start_date]
-	FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type] AS s1
+	FROM [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type] AS s1
 	WHERE NOT EXISTS (
 		SELECT 1
-		FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type] AS s2
+		FROM [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type] AS s2
 		WHERE s1.snz_uid = s2.snz_uid
 		AND s1.snz_jus_uid = s2.snz_jus_uid
 		AND s1.MMC_Rank = s2.MMC_Rank
@@ -338,10 +339,10 @@ possible_ends AS (
 		,snz_jus_uid
 		,MMC_Rank
 		,[end_date]
-	FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type] AS e1
+	FROM [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type] AS e1
 	WHERE NOT EXISTS (
 		SELECT 1
-		FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type] AS e2
+		FROM [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type] AS e2
 		WHERE e1.snz_uid = e2.snz_uid
 		AND e1.snz_jus_uid = e2.snz_jus_uid
 		AND e1.MMC_Rank = e2.MMC_Rank
@@ -353,7 +354,7 @@ SELECT s.snz_uid
 	,s.MMC_Rank
 	,s.[start_date]
 	,MIN(e.[end_date]) AS [end_date]
-INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_merge]
+INTO [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_merge]
 FROM possible_starts AS s
 INNER JOIN possible_ends AS e
 ON s.snz_uid = e.snz_uid
@@ -369,7 +370,7 @@ GO
 --------------------------------------------------------------------------------
 -- (8) output
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods_202506]
 GO
 
 SELECT snz_uid
@@ -377,25 +378,25 @@ SELECT snz_uid
 	,[start_date]
 	,[end_date]
 	,c.MMC_202503_code AS mm_type
-INTO [IDI_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods]
-FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_merge] AS m
-INNER JOIN [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_codes] AS c
+INTO [SIA_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods_202506]
+FROM [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_merge] AS m
+INNER JOIN [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_codes] AS c
 ON m.MMC_Rank = c.MMC_Rank
 GO
 
-CREATE NONCLUSTERED INDEX i_uid ON [IDI_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods] (snz_uid)
+CREATE NONCLUSTERED INDEX i_uid ON [SIA_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods_202506] (snz_uid)
 GO
 
 --------------------------------------------------------------------------------
 -- (9) clean up
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_codes]
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_all_dates]
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges]
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges_w_management_type]
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type]
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_COR_merge]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_codes]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_experienced_directives]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_all_dates]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_date_ranges_w_management_type]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_priority_management_type]
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[tmp_COR_merge]
 GO
 
 --------------------------------------------------------------------------------
@@ -442,7 +443,7 @@ SELECT YEAR(start_date) AS start_year
 	,COUNT(DISTINCT snz_uid) AS num_people
 	,SUM(DATEDIFF(DAY, start_date, end_date)) AS duration
 INTO #new
-FROM [IDI_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods]
+FROM [SIA_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods]
 WHERE end_date <= GETDATE()
 AND YEAR(start_date) BETWEEN 2000 AND 2020
 GROUP BY YEAR(start_date), IIF(mm_type IN ('HD_REL', 'HD_SENT'), 'HD', mm_type)
@@ -461,7 +462,7 @@ SELECT YEAR(new.start_date) AS start_year
 		IIF(new.end_date <= old.cor_rommp_period_end_date, new.end_date, old.cor_rommp_period_end_date) -- trimmed end date
 	)) AS duration
 INTO #overlap
-FROM [IDI_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods] AS new
+FROM [SIA_Sandpit].[DL-MAA2023-46].[def_COR_major_management_periods] AS new
 INNER JOIN [IDI_Clean_202503].[cor_clean].[ra_ofndr_major_mgmt_period_a] AS old
 ON new.snz_jus_uid = old.snz_jus_uid
 AND new.mm_type = old.cor_rommp_directive_type
@@ -505,4 +506,3 @@ ON a.start_year = c.start_year
 AND a.cor_mmp_mmc_code = c.cor_mmp_mmc_code
 WHERE a.cor_mmp_mmc_code NOT IN ('ALIVE', 'AGED_OUT')
 */
-

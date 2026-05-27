@@ -38,8 +38,8 @@ Inputs & Dependencies:
 - [IDI_Adhoc].[clean_read_MOH_SOCRATES].[moh_referral]
 
 Outputs:
-- [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_dysthymia]
-- [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis]
+- [IDI_Sandpit].[DL-MAA2023-46].[defn_mha_dysthymia]
+- [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis]
 
 
 Notes:
@@ -80,9 +80,9 @@ Issues:
 	with the definitions that are already running.
 	
 Parameters & Present values:
-  Current refresh = YYYYMM
+  Current refresh = 202506
   Prefix = defn_
-  Project schema = [DL-MAA20XX-YY]
+  Project schema = [DL-MAA2023-46]
  
 History (reverse order):
 2022-09-12 SA Prep for library
@@ -93,10 +93,10 @@ History (reverse order):
 
 /* Download the diagnosis lookup table from Github folder and upload onto datalab */
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis]
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis]
 GO
 
-CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] (
+CREATE TABLE [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] (
 	diagnosis	VARCHAR(30),
 	code_type	VARCHAR(30),
 	code		VARCHAR(10),
@@ -104,8 +104,8 @@ CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] (
 	explanation	VARCHAR(255),
 )
 
-BULK INSERT [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis]
-FROM '\\your project folder\diagnosis_codes.csv'
+BULK INSERT [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis]
+FROM '\\prtprdsasnas01\DataLab\MAA\MAA2023-46\diagnosis_codes.csv'
 WITH (
 	FIRSTROW = 2,
 	FIELDTERMINATOR = ',',
@@ -118,10 +118,10 @@ TABLES TO APPEND TO
 ********************************************************/
 
 /* Diagnosis or treatment only indicates dysthymia */
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_dysthymia_solo]
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_dysthymia_solo]
 GO
 
-CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_dysthymia_solo] (
+CREATE TABLE [IDI_Sandpit].[DL-MAA2023-46].[tmp_dysthymia_solo] (
 	snz_uid	INT,
 	event_date DATE,
 )
@@ -130,16 +130,16 @@ CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_dysthymia_solo] (
 PRIVATE HOSPITAL DISCHARGE
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_dysthymia_solo] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_dysthymia_solo] (snz_uid, event_date)
 SELECT a.[snz_uid]
 	,CAST([moh_pri_evt_start_date] AS DATE) AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[priv_fund_hosp_discharges_event] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[moh_clean].[priv_fund_hosp_discharges_diag] AS b
+FROM [IDI_Clean_202506].[moh_clean].[priv_fund_hosp_discharges_event] AS a
+INNER JOIN [IDI_Clean_202506].[moh_clean].[priv_fund_hosp_discharges_diag] AS b
 ON a.[moh_pri_evt_event_id_nbr] = b.[moh_pri_diag_event_id_nbr]
 AND [moh_pri_diag_sub_sys_code] = [moh_pri_diag_clinic_sys_code]
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING([moh_pri_diag_clinic_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'dysthymia'
 	AND r.code_type = 'ICD10'
@@ -148,7 +148,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING([moh_pri_diag_clinic_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'dysthymia'
 	AND r.code_type = 'ICD9'
@@ -161,16 +161,16 @@ GO
 PUBLIC HOSPITAL DISCHARGE
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_dysthymia_solo] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_dysthymia_solo] (snz_uid, event_date)
 SELECT b.[snz_uid]
 	,[moh_evt_evst_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[pub_fund_hosp_discharges_diag] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[moh_clean].[pub_fund_hosp_discharges_event] AS b
+FROM [IDI_Clean_202506].[moh_clean].[pub_fund_hosp_discharges_diag] AS a
+INNER JOIN [IDI_Clean_202506].[moh_clean].[pub_fund_hosp_discharges_event] AS b
 ON [moh_dia_clinical_sys_code] = [moh_dia_submitted_system_code]
 AND [moh_evt_event_id_nbr]=[moh_dia_event_id_nbr]
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[moh_dia_clinical_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'dysthymia'
 	AND r.code_type = 'ICD10'
@@ -179,7 +179,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[moh_dia_clinical_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'dysthymia'
 	AND r.code_type = 'ICD9'
@@ -192,15 +192,15 @@ GO
 PRIMHD AND MHINC
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_dysthymia_solo] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_dysthymia_solo] (snz_uid, event_date)
 SELECT b.snz_uid
       ,[classification_start] AS event_date
 FROM [IDI_Adhoc].[clean_read_MOH_PRIMHD].[moh_primhd_mhinc] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[security].[concordance] AS b
+INNER JOIN [IDI_Clean_202506].[security].[concordance] AS b
 ON a.snz_moh_uid = b.snz_moh_uid 
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'dysthymia'
 	AND r.code_type = 'ICD10'
@@ -208,7 +208,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'dysthymia'
 	AND r.code_type = 'DSM'
@@ -220,15 +220,15 @@ GO
 PRIMHD DIAGNOSES
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_dysthymia_solo] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_dysthymia_solo] (snz_uid, event_date)
 SELECT b.snz_uid
       ,CONVERT(DATE, CLASSIFICATION_START_DATE, 103) AS event_date
 FROM [IDI_Adhoc].[clean_read_MOH_PRIMHD].[primhd_diagnoses] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[security].[concordance] AS b
+INNER JOIN [IDI_Clean_202506].[security].[concordance] AS b
 ON a.snz_moh_uid = b.snz_moh_uid 
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'dysthymia'
 	AND r.code_type = 'ICD10'
@@ -236,7 +236,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'dysthymia'
 	AND r.code_type = 'DSM'
@@ -250,14 +250,14 @@ SOCRATES
 We use the depression code from socrates as there is not a dysthymia specific code.
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_dysthymia_multi] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_dysthymia_solo] (snz_uid, event_date)
 SELECT b.snz_uid
 	  ,COALESCE(
 		CAST(SUBSTRING([FirstContactDate], 1, 7) AS DATE),
 		CAST(SUBSTRING([ReferralDate],1,7) AS DATE)
 		) AS event_date
 FROM [IDI_Adhoc].[clean_read_MOH_SOCRATES].moh_disability AS a 
-INNER JOIN [IDI_Clean_YYYYMM].[security].[concordance] AS b 
+INNER JOIN [IDI_Clean_202506].[security].[concordance] AS b 
 ON a.snz_moh_uid = b.snz_moh_uid
 INNER JOIN [IDI_Adhoc].[clean_read_MOH_SOCRATES].[moh_needs_assessment] AS c 
 ON a.snz_moh_uid = c.snz_moh_uid 
@@ -269,12 +269,12 @@ WHERE a.[Code] = '1304'
 FINAL TABLE CREATION
 ****************************************************************************************************************/
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_dysthymia]
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[defn_mha_dysthymia_202506]
 GO
 
 SELECT DISTINCT snz_uid, event_date
-INTO [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_dysthymia]
-FROM [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_dysthymia_solo]
+INTO [IDI_Sandpit].[DL-MAA2023-46].[defn_mha_dysthymia_202506]
+FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_dysthymia_solo]
 GO
 
 /********************************************************
@@ -282,11 +282,11 @@ TIDY UP
 ********************************************************/
 
 /* Add index */
-CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_dysthymia] (snz_uid);
+CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA2023-46].[defn_mha_dysthymia_202506] (snz_uid);
 GO
 /* Compress final table to save space */
-ALTER TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_dysthymia] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);
+ALTER TABLE [IDI_Sandpit].[DL-MAA2023-46].[defn_mha_dysthymia_202506] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);
 GO
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_dysthymia_solo]
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_dysthymia_solo]
 GO

@@ -45,8 +45,8 @@ Inputs & Dependencies:
 - [IDI_Adhoc].[clean_read_MOH_SOCRATES].[moh_referral]
 
 Outputs:
-- [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_major_depressive_disorder]
-- [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis]
+- [IDI_Sandpit].[DL-MAA2023-46].[defn_mha_major_depressive_disorder]
+- [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis]
 
 Notes:
 1) Estimates for prevalance:
@@ -98,9 +98,9 @@ Issues:
 	with the definitions that are already running.
 	
 Parameters & Present values:
-  Current refresh = YYYYMM
+  Current refresh = 202506
   Prefix = defn_
-  Project schema = [DL-MAA20XX-YY]
+  Project schema = [DL-MAA2023-46]
  
 History (reverse order):
 2022-09-12 SA Prep for library
@@ -110,10 +110,10 @@ History (reverse order):
 
 /* Download the diagnosis lookup table from Github folder and upload onto datalab */
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis]
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis]
 GO
 
-CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] (
+CREATE TABLE [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] (
 	diagnosis	VARCHAR(30),
 	code_type	VARCHAR(30),
 	code		VARCHAR(10),
@@ -121,8 +121,8 @@ CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] (
 	explanation	VARCHAR(255),
 )
 
-BULK INSERT [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis]
-FROM '\\your project folder\diagnosis_codes.csv'
+BULK INSERT [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis]
+FROM '\\prtprdsasnas01\DataLab\MAA\MAA2023-46\diagnosis_codes.csv'
 WITH (
 	FIRSTROW = 2,
 	FIELDTERMINATOR = ',',
@@ -135,19 +135,19 @@ TABLES TO APPEND TO
 ********************************************************/
 
 /* Diagnosis or treatment only indicates bipolar */
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_solo]
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_solo]
 GO
 
-CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_solo] (
+CREATE TABLE [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_solo] (
 	snz_uid	INT,
 	event_date DATE,
 )
 
 /* Diagnosis or treatment used for bipolar and other conditions */
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_multi]
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_multi]
 GO
 
-CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_multi] (
+CREATE TABLE [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_multi] (
 	snz_uid	INT,
 	event_date DATE,
 )
@@ -156,10 +156,10 @@ CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_multi] (
 MSD INCAPACITATION
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_multi] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_multi] (snz_uid, event_date)
 SELECT [snz_uid]
 	,[msd_incp_incp_from_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[msd_clean].[msd_incapacity]
+FROM [IDI_Clean_202506].[msd_clean].[msd_incapacity]
 WHERE [msd_incp_incrsn_code] = '161'
 OR [msd_incp_incrsn95_1_code] = '161'
 OR [msd_incp_incrsn95_2_code] = '161'
@@ -172,15 +172,15 @@ GO
 PHARMACEUTICALS
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_solo] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_solo] (snz_uid, event_date)
 SELECT a.[snz_uid]
 		,[moh_pha_dispensed_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[pharmaceutical] AS a
-INNER JOIN [IDI_Metadata].[clean_read_CLASSIFICATIONS].[moh_dim_form_pack_subsidy_code] AS b
+FROM [IDI_Clean_202506].[moh_clean].[pharmaceutical] AS a
+INNER JOIN [IDI_Metadata_202506].[moh_pharm].[dim_form_pack_subsidy_code] AS b
 ON a.[moh_pha_dim_form_pack_code] = b.[DIM_FORM_PACK_SUBSIDY_KEY]
 WHERE EXISTS (
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(CAST(CHEMICAL_ID AS VARCHAR), 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'depressive'
 	AND r.code_type = 'pharm_chemical'
@@ -188,15 +188,15 @@ WHERE EXISTS (
 )
 GO
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_multi] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_multi] (snz_uid, event_date)
 SELECT a.[snz_uid]
 		,[moh_pha_dispensed_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[pharmaceutical] AS a
-INNER JOIN [IDI_Metadata].[clean_read_CLASSIFICATIONS].[moh_dim_form_pack_subsidy_code] AS b
+FROM [IDI_Clean_202506].[moh_clean].[pharmaceutical] AS a
+INNER JOIN [IDI_Metadata_202506].[moh_pharm].[dim_form_pack_subsidy_code] AS b
 ON a.[moh_pha_dim_form_pack_code] = b.[DIM_FORM_PACK_SUBSIDY_KEY]
 WHERE EXISTS (
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(CAST(CHEMICAL_ID AS VARCHAR), 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'depressive'
 	AND r.code_type = 'pharm_chemical'
@@ -208,10 +208,10 @@ GO
 INTERRAI
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_multi] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_multi] (snz_uid, event_date)
 SELECT [snz_uid]
 	,[moh_irai_assessment_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[interrai]
+FROM [IDI_Clean_202506].[moh_clean].[interrai]
 WHERE moh_irai_depression_code > 0
 GO
 
@@ -219,16 +219,16 @@ GO
 PRIVATE HOSPITAL DISCHARGE
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_solo] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_solo] (snz_uid, event_date)
 SELECT a.[snz_uid]
 	,CAST([moh_pri_evt_start_date] AS DATE) AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[priv_fund_hosp_discharges_event] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[moh_clean].[priv_fund_hosp_discharges_diag] AS b
+FROM [IDI_Clean_202506].[moh_clean].[priv_fund_hosp_discharges_event] AS a
+INNER JOIN [IDI_Clean_202506].[moh_clean].[priv_fund_hosp_discharges_diag] AS b
 ON a.[moh_pri_evt_event_id_nbr] = b.[moh_pri_diag_event_id_nbr]
 AND [moh_pri_diag_sub_sys_code] = [moh_pri_diag_clinic_sys_code]
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING([moh_pri_diag_clinic_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'depressive'
 	AND r.code_type = 'ICD10'
@@ -237,7 +237,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING([moh_pri_diag_clinic_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'depressive'
 	AND r.code_type = 'ICD9'
@@ -250,16 +250,16 @@ GO
 PUBLIC HOSPITAL DISCHARGE
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_solo] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_solo] (snz_uid, event_date)
 SELECT b.[snz_uid]
 	,[moh_evt_evst_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[pub_fund_hosp_discharges_diag] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[moh_clean].[pub_fund_hosp_discharges_event] AS b
+FROM [IDI_Clean_202506].[moh_clean].[pub_fund_hosp_discharges_diag] AS a
+INNER JOIN [IDI_Clean_202506].[moh_clean].[pub_fund_hosp_discharges_event] AS b
 ON [moh_dia_clinical_sys_code] = [moh_dia_submitted_system_code]
 AND [moh_evt_event_id_nbr]=[moh_dia_event_id_nbr]
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[moh_dia_clinical_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'depressive'
 	AND r.code_type = 'ICD10'
@@ -268,7 +268,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[moh_dia_clinical_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'depressive'
 	AND r.code_type = 'ICD9'
@@ -281,15 +281,15 @@ GO
 PRIMHD AND MHINC
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_solo] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_solo] (snz_uid, event_date)
 SELECT b.snz_uid
       ,[classification_start] AS event_date
 FROM [IDI_Adhoc].[clean_read_MOH_PRIMHD].[moh_primhd_mhinc] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[security].[concordance] AS b
+INNER JOIN [IDI_Clean_202506].[security].[concordance] AS b
 ON a.snz_moh_uid = b.snz_moh_uid 
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'depressive'
 	AND r.code_type = 'ICD10'
@@ -297,7 +297,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'depressive'
 	AND r.code_type = 'DSM'
@@ -309,16 +309,16 @@ GO
 PRIMHD DIAGNOSIS
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_solo] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_solo] (snz_uid, event_date)
 SELECT snz_uid
       ,DATEFROMPARTS(SUBSTRING([CLASSIFICATION_START_DATE],7,4),SUBSTRING([CLASSIFICATION_START_DATE],4,2),SUBSTRING([CLASSIFICATION_START_DATE],1,2)) AS event_date
 FROM [IDI_Adhoc].[clean_read_MOH_PRIMHD].[primhd_diagnoses] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[security].[concordance] AS b
+INNER JOIN [IDI_Clean_202506].[security].[concordance] AS b
 ON a.snz_moh_uid = b.snz_moh_uid 
 
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'depressive'
 	AND r.code_type = 'ICD10'
@@ -326,7 +326,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'depressive'
 	AND r.code_type = 'DSM'
@@ -338,14 +338,14 @@ GO
 SOCRATES
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_multi] (snz_uid, event_date)
+INSERT INTO [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_multi] (snz_uid, event_date)
 SELECT b.snz_uid
 	  ,COALESCE(
 		CAST(SUBSTRING([FirstContactDate], 1, 7) AS DATE),
 		CAST(SUBSTRING([ReferralDate],1,7) AS DATE)
 		) AS event_date
 FROM [IDI_Adhoc].[clean_read_MOH_SOCRATES].moh_disability AS a 
-INNER JOIN [IDI_Clean_YYYYMM].[security].[concordance] AS b 
+INNER JOIN [IDI_Clean_202506].[security].[concordance] AS b 
 ON a.snz_moh_uid = b.snz_moh_uid
 INNER JOIN [IDI_Adhoc].[clean_read_MOH_SOCRATES].[moh_needs_assessment] AS c 
 ON a.snz_moh_uid = c.snz_moh_uid 
@@ -358,28 +358,28 @@ FINAL TABLE CREATION
 ****************************************************************************************************************/
 
 /* Add indexes */
-CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_solo] (snz_uid);
+CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_solo] (snz_uid);
 GO
-CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_multi] (snz_uid);
+CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_multi] (snz_uid);
 GO
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_major_depressive_disorder]
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[defn_mha_major_depressive_disorder_202506]
 GO
 
 WITH multi_to_add AS (
 	SELECT snz_uid, event_date
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_multi] AS m
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_multi] AS m
 	WHERE EXISTS (
 		SELECT 1
-		FROM [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_solo] AS s
+		FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_solo] AS s
 		WHERE m.snz_uid = s.snz_uid
 	)
 )
 SELECT DISTINCT snz_uid, event_date
-INTO [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_major_depressive_disorder]
+INTO [IDI_Sandpit].[DL-MAA2023-46].[defn_mha_major_depressive_disorder_202506]
 FROM (
 	SELECT snz_uid, event_date
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_solo]
+	FROM [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_solo]
 
 	UNION ALL
 
@@ -393,12 +393,12 @@ TIDY UP
 ********************************************************/
 
 /* Add index */
-CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_major_depressive_disorder] (snz_uid);
+CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA2023-46].[defn_mha_major_depressive_disorder_202506] (snz_uid);
 GO
 /* Compress final table to save space */
-ALTER TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_major_depressive_disorder] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);
+ALTER TABLE [IDI_Sandpit].[DL-MAA2023-46].[defn_mha_major_depressive_disorder_202506] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);
 GO
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_solo]
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_depressive_multi]
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_solo]
+DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA2023-46].[tmp_depressive_multi]
 GO

@@ -2,21 +2,12 @@
 Title: Spell of employment
 Author: Simon Anastasiadis
 Re-edit: Freya Li
+Reviewer: Simon Anastasiadis
 
-Superseded by Code Module: https://idcommons.discourse.group/pub/employment-spells
-
-Acknowledgements:
-Informatics for Social Services and Wellbeing (terourou.org) supported the publishing of these definitions
-
-Disclaimer:
-The definitions provided in this library were determined by the Social Wellbeing Agency to be suitable in the 
-context of a specific project. Whether or not these definitions are suitable for other projects depends on the 
-context of those projects. Researchers using definitions from this library will need to determine for themselves 
-to what extent the definitions provided here are suitable for reuse in their projects. While the Agency provides 
-this library as a resource to support IDI research, it provides no guarantee that these definitions are fit for reuse.
-
-Citation:
-Social Wellbeing Agency. Definitions library. Source code. https://github.com/nz-social-wellbeing-agency/definitions_library
+Inputs & Dependencies:
+- [IDI_Clean].[ir_clean].[ird_ems]
+Outputs:
+- [SIA_Sandpit].[DL-MAA2023-46].[defn_employed_spell]
 
 Description:
 A spell where wages or salaries are reported to IRD as evidence of employment.
@@ -25,11 +16,6 @@ Intended purpose:
 Creating indicators of when/whether a person was employed.
 Identifying spells when a person is employed.
 Counting the number of days a person spends employed.
-
-Inputs & Dependencies:
-- [IDI_Clean].[ir_clean].[ird_ems]
-Outputs:
-- [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_employed_spell]
  
 Notes:
 1) Employer Monthly Summaries (EMS) records provide an indication that a person was employed
@@ -38,9 +24,9 @@ Notes:
    the first and last day of the month is used.
 2) Employment includes receipt of Wages & Salaries (WAS or W&S), and receipt of Schedular Payments
    from which Withholding Payments are deducted (WHP). People receiving Wages & Salaries are
-   employees. People receiving Schedular Payments may be contractors. Neither of these definitions
-   perfectly capture self employment (sole trader, partnership, or company) some of which can 
-   only be observed at a (tax) year resolution.
+   employees. People receiving Schedular Payments may be contractors or business owners.
+   Neither of these definitions perfectly capture self employment (sole trader, partnership,
+   or company) some of which can only be observed at a (tax) year resolution.
    However, comparing EMS to tax year summaries suggests that W&S and WHP captures at least 
    some self-employment. And that this is more likely to be observed as WHP rather than W&S.
 3) The EMS record includes start and end dates for employment. Where these are populated they
@@ -64,13 +50,17 @@ Notes:
    to narrower dates of interest.
 5) A placeholder identity exists where the encrypted IRD number [snz_ird_uid] is equal to
    zero. Documentation states these are people who can not be linked. We exclude this identity.
+6) Entity counts can be required for business information. As the need to merge spells and avoid
+	double counting of days is more important than the need to get entity counts perfect, each
+	output spell has the entity IDs of only the employer at the start of the spell. This means
+	any count of entities will be more conservative than the true value.
 
 Parameters & Present values:
-  Current refresh = YYYYMM
-  Prefix = d2gP2_
-  Project schema = [DL-MAA20XX-YY]
-  Earliest start date = '2014-01-01'
-  Latest end date = '2020-12-31'
+  Current refresh = 202506
+  Prefix = defn_
+  Project schema = [DL-MAA2023-46]
+  Earliest start date = '2015-01-01'
+  Latest end date = '2024-12-31'
  
 Issues:
 - Does not capture all self-employment. Use of annual tax year data is recommended for analyses at
@@ -78,6 +68,7 @@ Issues:
 - Slow. For years 2014-2020 runtime more than 2 hours
  
 History (reverse order):
+2025-05-09 SA update for test and learns
 2021-01-26 SA QA
 2021-01-11 FL v2 (Change prefix and update the table to the latest refresh)
 2020-07-22 JB QA
@@ -90,42 +81,48 @@ USE IDI_UserCode
 GO
 
 /* Clear existing view */
-DROP VIEW IF EXISTS [DL-MAA20XX-YY].[d2gP2_employed_spell_staging];
+DROP VIEW IF EXISTS [DL-MAA2023-46].[defn_employed_spell_staging_202506]
 GO
 
 /* Create staging */
-CREATE VIEW [DL-MAA20XX-YY].[d2gP2_employed_spell_staging] AS
+CREATE VIEW [DL-MAA2023-46].[defn_employed_spell_staging_202506] AS
 SELECT snz_uid
-       ,CASE WHEN [ir_ems_employee_start_date] IS NOT NULL
+	,CASE
+		WHEN [ir_ems_employee_start_date] IS NOT NULL
 			AND [ir_ems_employee_start_date] < [ir_ems_return_period_date]
 			AND DATEDIFF(DAY, [ir_ems_employee_start_date], [ir_ems_return_period_date]) < 60 -- employee started in the last two months
 		THEN [ir_ems_employee_start_date]
 		ELSE DATEFROMPARTS(YEAR([ir_ems_return_period_date]), MONTH([ir_ems_return_period_date]),1) END AS [start_date]
-	   ,CASE WHEN [ir_ems_employee_end_date] IS NOT NULL
+	,CASE
+		WHEN [ir_ems_employee_end_date] IS NOT NULL
 			AND [ir_ems_employee_end_date] < [ir_ems_return_period_date]
 			AND ([ir_ems_employee_start_date] IS NULL OR [ir_ems_employee_start_date] < [ir_ems_employee_end_date])
 			AND DATEDIFF(DAY, [ir_ems_employee_end_date], [ir_ems_return_period_date]) < 27 -- employee finished in the last month
 		THEN [ir_ems_employee_end_date] 
 		ELSE [ir_ems_return_period_date] END AS [end_date]
-FROM [IDI_Clean_YYYYMM].[ir_clean].[ird_ems]
-WHERE [ir_ems_income_source_code] IN ('W&S', 'WHP')
-AND [snz_ird_uid] <> 0 -- exclude placeholder person without IRD number
-AND [ir_ems_return_period_date] BETWEEN '2014-01-01' AND '2020-12-31';
+	,CAST(SUBSTRING([ir_ems_enterprise_nbr], 3, LEN([ir_ems_enterprise_nbr]) - 2) AS INT) AS [ir_ems_enterprise_nbr]
+	,CAST(SUBSTRING([ir_ems_pbn_nbr], 3, LEN([ir_ems_pbn_nbr]) - 2) AS INT) AS [ir_ems_pbn_nbr]
+FROM [IDI_Clean_202506].[ir_clean].[ird_ems]
+WHERE [ir_ems_income_source_code] IN ('W&S', 'WHP') -- employment income types
+AND [snz_ird_uid] > 0 -- exclude placeholder person without IRD number
+AND ir_ems_gross_earnings_amt > 0 -- zero and negative earnings may be just administrative records
+AND ir_ems_snz_unique_nbr = 1
+AND [ir_ems_return_period_date] BETWEEN '2015-01-01' AND '2024-12-31'
 GO
 
 /* Condensed spells */
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_employed_spell];
+DROP TABLE IF EXISTS [SIA_Sandpit].[DL-MAA2023-46].[defn_employed_spell_202506]
 GO
 
 WITH
 /* exclude start dates that are within another spell */
 spell_starts AS (
-	SELECT [snz_uid], [start_date]
-	FROM [IDI_UserCode].[DL-MAA20XX-YY].[d2gP2_employed_spell_staging] s1
+	SELECT [snz_uid], [start_date], [ir_ems_enterprise_nbr], [ir_ems_pbn_nbr]
+	FROM [IDI_UserCode].[DL-MAA2023-46].[defn_employed_spell_staging_202506] AS s1
 	WHERE [start_date] <= [end_date]
 	AND NOT EXISTS (
 		SELECT 1
-		FROM [IDI_UserCode].[DL-MAA20XX-YY].[d2gP2_employed_spell_staging] s2
+		FROM [IDI_UserCode].[DL-MAA2023-46].[defn_employed_spell_staging_202506] AS s2
 		WHERE s1.snz_uid = s2.snz_uid
 		AND DATEADD(DAY, -1, s1.[start_date]) BETWEEN s2.[start_date] AND s2.[end_date]
 	)
@@ -133,34 +130,35 @@ spell_starts AS (
 /* exclude end dates that are within another spell */
 spell_ends AS (
 	SELECT [snz_uid], [end_date]
-	FROM [IDI_UserCode].[DL-MAA20XX-YY].[d2gP2_employed_spell_staging] t1
+	FROM [IDI_UserCode].[DL-MAA2023-46].[defn_employed_spell_staging_202506] AS t1
 	WHERE [start_date] <= [end_date]
 	AND NOT EXISTS (
 		SELECT 1 
-		FROM [IDI_UserCode].[DL-MAA20XX-YY].[d2gP2_employed_spell_staging] t2
+		FROM [IDI_UserCode].[DL-MAA2023-46].[defn_employed_spell_staging_202506] AS t2
 		WHERE t2.snz_uid = t1.snz_uid
 		AND YEAR(t1.[end_date]) <> 9999
 		AND DATEADD(DAY, 1, t1.[end_date]) BETWEEN t2.[start_date] AND t2.[end_date]
 		--AND IIF(YEAR(t1.[end_date]) = 9999, t1.[end_date], DATEADD(DAY, 1, t1.[end_date])) BETWEEN t2.[start_date] AND t2.[end_date]
 	)
 )
-SELECT s.snz_uid, s.[start_date], MIN(e.[end_date]) as [end_date]
-INTO [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_employed_spell]
+SELECT s.snz_uid
+	, s.[start_date]
+	, s.[ir_ems_enterprise_nbr] -- entity IDs are drawn from initial employer
+	, s.[ir_ems_pbn_nbr]        -- so entity counts will be (very) conservative
+	, MIN(e.[end_date]) as [end_date]
+INTO [SIA_Sandpit].[DL-MAA2023-46].[defn_employed_spell_202506]
 FROM spell_starts s
 INNER JOIN spell_ends e
 ON s.snz_uid = e.snz_uid
 AND s.[start_date] <= e.[end_date]
-GROUP BY s.snz_uid, s.[start_date]
+GROUP BY s.snz_uid, s.[start_date], s.[ir_ems_enterprise_nbr], s.[ir_ems_pbn_nbr]
 GO
 
 /* Add index */
-CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_employed_spell] (snz_uid);
-GO
-/* Compress final table to save space */
-ALTER TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[d2gP2_employed_spell] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);
+CREATE NONCLUSTERED INDEX my_index_name ON [SIA_Sandpit].[DL-MAA2023-46].[defn_employed_spell_202506] (snz_uid)
 GO
 
 /* Clear staging view */
-DROP VIEW IF EXISTS [DL-MAA20XX-YY].[d2gP2_employed_spell_staging];
+DROP VIEW IF EXISTS [DL-MAA2023-46].[defn_employed_spell_staging_202506]
 GO
 

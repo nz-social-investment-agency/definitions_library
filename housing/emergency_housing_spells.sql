@@ -26,7 +26,7 @@ Inputs & Dependencies:
 - [IDI_Clean].[msd_clean].[msd_third_tier_expenditure]
 
 Outputs:
-- [IDI_UserCode].[DL-MAA20XX-YY].[defn_emergency_housing]
+- [IDI_UserCode].[DL-MAA2023-46].[defn_emergency_housing_202506]
 
 Key rules:
 1. 'IDI Adhoc Payments to Beneficiaries (Third Tier Expenditure)' table is located in [msd_clean].[msd_third_tier_expenditure] table in the [IDI_Clean] database. 
@@ -69,9 +69,9 @@ References & Contacts:
 
 
 Parameters & Present values:
-  Current refresh = YYYYMM
+  Current refresh = 202506
   Prefix = defn_
-  Project schema = [DL-MAA20XX-YY]
+  Project schema = [DL-MAA2023-46]
 
 ---------------------------------------------------------------------------------------------------------------------------
 Column name                     Description
@@ -95,11 +95,11 @@ USE IDI_UserCode
 GO
 
 /* Delete the database object if it already exists */
-DROP VIEW IF EXISTS [IDI_UserCode].[DL-MAA20XX-YY].[defn_emergency_housing]
+DROP VIEW IF EXISTS [DL-MAA2023-46].[defn_emergency_housing_202506]
 GO
 
 /* Create the database object from the temporary view by merging the any close consecutive applications together */
-CREATE VIEW [IDI_UserCode].[DL-MAA20XX-YY].[defn_emergency_housing] AS
+CREATE VIEW [DL-MAA2023-46].[defn_emergency_housing_202506] AS
 	/* Trim out the duplicate rows from the MSD data after filtering for people that have applied for emergency housing */ 
 	WITH 
 	emergency_housing AS (
@@ -107,7 +107,7 @@ CREATE VIEW [IDI_UserCode].[DL-MAA20XX-YY].[defn_emergency_housing] AS
 			,[snz_msd_uid]
 			,[msd_tte_app_date] AS [start_date]
 			,dateadd(day, 23, [msd_tte_app_date]) AS [end_date] /* Adds a 23 day threshold between each application so that any consecutive applications made within 23 day thresholds can be joined up together into a single spell. */
-		FROM {idicleanversion}.[msd_clean].[msd_third_tier_expenditure]
+		FROM [IDI_Clean_202506].[msd_clean].[msd_third_tier_expenditure]
 		WHERE [msd_tte_pmt_rsn_type_code] IN ('855') /* Emergency housing code */ 
 		GROUP BY snz_uid, snz_msd_uid, msd_tte_app_date
 	),
