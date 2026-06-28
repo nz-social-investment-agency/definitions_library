@@ -54,14 +54,14 @@ Inputs & Dependencies:
 - [IDI_Metadata].[clean_read_CLASSIFICATIONS].[msd_incapacity_reason_code_4]
 - [IDI_Metadata].[clean_read_CLASSIFICATIONS].[moh_pharmaceutical_lookup]
 - [IDI_Adhoc].[clean_read_MOH_PRIMHD].[moh_primhd_mhinc]
-- [IDI_Adhoc].[clean_read_MOH_PRIMHD].[primhd_diagnoses]
-- [IDI_Adhoc].[clean_read_MOH_SOCRATES].[moh_disability]
-- [IDI_Adhoc].[clean_read_MOH_SOCRATES].[moh_needs_assessment]
-- [IDI_Adhoc].[clean_read_MOH_SOCRATES].[moh_referral]
+- [IDI_Adhoc].[clean_read_MOH_PRIMHD].[primhd_diagnoses_$(REFRESH)]
+- [IDI_Clean].[moh_clean].[socrates_disability]
+- [IDI_Clean].[moh_clean].[socrates_needs_ass]
+- [IDI_Clean].[moh_clean].[socrates_referral]
 - [IDI_Adhoc].[clean_read_MOH_PHARMACEUTICAL].[moh_PHARMACEUTICAL_LOOKUP_TABLE]
 Outputs:
-- [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_drug_abuse_or_dependence]
-- [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis]
+- [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[defn_mha_drug_abuse_or_dependence_$(REFRESH)]
+- [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis]
 
 
 Notes:
@@ -106,9 +106,9 @@ Notes:
 	advised to review this constraint.
 
 Parameters & Present values:
-  Current refresh = YYYYMM
+  Current refresh = $(REFRESH)
   Prefix = defn_
-  Project schema = [DL-MAA20XX-YY]
+  Project schema = [$(PROJECT_SCHEMA)]
 	
 Issues:
 1) Because all our MHA tables use the same lookup/reference table, and all definitions load
@@ -117,17 +117,24 @@ Issues:
 	with the definitions that are already running.
 	
 History (reverse order):
+2025-01-29 SA removed PRIMHD team codes, replaced with text filter 
+2025-01-20 CR updated to IDI_Clean version of socrates and 202510 PRIMHD
 2022-09-12 SA Prep for library
 2022-07-19 MR Tidy-up
 2022-06-10 CW Definition creation
 *************************************************************************************************************************/
 
+-- :SETVAR PROJECT_DB "SIA_Sandpit"
+-- :SETVAR PROJECT_SCHEMA "DL-MAA2026-04"
+-- :SETVAR REFRESH "202603"
+-- :SETVAR SQL_FOLDER "\\prtprdsasnas01\DataLab\MAA\MAA2026-04\Cohorts pipeline - matching\1 Definitions\Reference files"
+
 /* Download the diagnosis lookup table from Github folder and upload onto datalab */
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis]
+DROP TABLE IF EXISTS [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis]
 GO
 
-CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] (
+CREATE TABLE [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] (
 	diagnosis	VARCHAR(30),
 	code_type	VARCHAR(30),
 	code		VARCHAR(10),
@@ -135,8 +142,8 @@ CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] (
 	explanation	VARCHAR(255),
 )
 
-BULK INSERT [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis]
-FROM '\\your project folder\diagnosis_codes.csv'
+BULK INSERT [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis]
+FROM '$(SQL_FOLDER)\diagnosis_codes.csv'
 WITH (
 	FIRSTROW = 2,
 	FIELDTERMINATOR = ',',
@@ -148,20 +155,20 @@ WITH (
 TABLES TO APPEND TO
 ********************************************************/
 
-/* Diagnosis or treatment only indicates bipolar */
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo]
+/* Diagnosis or treatment only indicates substance abuse */
+DROP TABLE IF EXISTS [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo]
 GO
 
-CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (
+CREATE TABLE [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (
 	snz_uid	INT,
 	event_date DATE,
 )
 
-/* Diagnosis or treatment used for bipolar and other conditions */
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_multi]
+/* Diagnosis or treatment used for substance abuse and other conditions */
+DROP TABLE IF EXISTS [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_multi]
 GO
 
-CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_multi] (
+CREATE TABLE [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_multi] (
 	snz_uid	INT,
 	event_date DATE,
 )
@@ -170,18 +177,18 @@ CREATE TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_multi] (
 MORTALITY
 
 Note that people who died with this diagnosis will likely
-have had bipolar for a while before death
+have had substance abuse for a while before death
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid, event_date)
 SELECT b.snz_uid
 	  ,EOMONTH(DATEFROMPARTS([moh_mor_death_year_nbr],[moh_mor_death_month_nbr],1)) AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[mortality_diagnosis] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[moh_clean].[mortality_registrations] AS b
+FROM [IDI_Clean_$(REFRESH)].[moh_clean].[mortality_diagnosis] AS a
+INNER JOIN [IDI_Clean_$(REFRESH)].[moh_clean].[mortality_registrations] AS b
 ON a.[snz_dia_death_reg_uid] = b.snz_dia_death_reg_uid
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[moh_mort_diag_clinical_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'ICD10'
@@ -190,7 +197,7 @@ WHERE EXISTS(
 )
 OR EXISTS (
 SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[moh_mort_diag_clinical_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'ICD9'
@@ -199,7 +206,7 @@ SELECT 1
 )
 OR EXISTS (
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[moh_mort_diag_clinical_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'external_cause'
@@ -212,15 +219,15 @@ GO
 PHARMACEUTICALS
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid, event_date)
 SELECT a.[snz_uid]
 		,[moh_pha_dispensed_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[pharmaceutical] AS a
-INNER JOIN [IDI_Metadata].[clean_read_CLASSIFICATIONS].[moh_dim_form_pack_subsidy_code] AS b
+FROM [IDI_Clean_$(REFRESH)].[moh_clean].[pharmaceutical] AS a
+INNER JOIN [IDI_Metadata_$(REFRESH)].[moh_pharm].[dim_form_pack_subsidy_code] AS b
 ON a.[moh_pha_dim_form_pack_code] = b.[DIM_FORM_PACK_SUBSIDY_KEY]
 WHERE EXISTS (
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(CAST(CHEMICAL_ID AS VARCHAR), 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'pharm_chemical'
@@ -228,15 +235,15 @@ WHERE EXISTS (
 )
 GO
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_multi] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_multi] (snz_uid, event_date)
 SELECT a.[snz_uid]
 		,[moh_pha_dispensed_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[pharmaceutical] AS a
-INNER JOIN [IDI_Metadata].[clean_read_CLASSIFICATIONS].[moh_dim_form_pack_subsidy_code] AS b
+FROM [IDI_Clean_$(REFRESH)].[moh_clean].[pharmaceutical] AS a
+INNER JOIN [IDI_Metadata_$(REFRESH)].[moh_pharm].[dim_form_pack_subsidy_code] AS b
 ON a.[moh_pha_dim_form_pack_code] = b.[DIM_FORM_PACK_SUBSIDY_KEY]
 WHERE EXISTS (
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(CAST(CHEMICAL_ID AS VARCHAR), 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'pharm_chemical'
@@ -250,16 +257,16 @@ PRIVATE HOSPITAL DISCHARGE
 history of tobacco use ,'V1582','V1583' excluded - people smoking
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid, event_date)
 SELECT a.[snz_uid]
 	,CAST([moh_pri_evt_start_date] AS DATE) AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[priv_fund_hosp_discharges_event] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[moh_clean].[priv_fund_hosp_discharges_diag] AS b
+FROM [IDI_Clean_$(REFRESH)].[moh_clean].[priv_fund_hosp_discharges_event] AS a
+INNER JOIN [IDI_Clean_$(REFRESH)].[moh_clean].[priv_fund_hosp_discharges_diag] AS b
 ON a.[moh_pri_evt_event_id_nbr] = b.[moh_pri_diag_event_id_nbr]
 AND [moh_pri_diag_sub_sys_code] = [moh_pri_diag_clinic_sys_code]
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING([moh_pri_diag_clinic_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'ICD10'
@@ -268,7 +275,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING([moh_pri_diag_clinic_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'ICD9'
@@ -277,7 +284,7 @@ OR EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING([moh_pri_diag_clinic_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'external_cause'
@@ -292,16 +299,16 @@ PUBLIC HOSPITAL DISCHARGE
 history of tobacco use ,'V1582','V1583' excluded - people smoking
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid, event_date)
 SELECT b.[snz_uid]
 	,[moh_evt_evst_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[pub_fund_hosp_discharges_diag] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[moh_clean].[pub_fund_hosp_discharges_event] AS b
+FROM [IDI_Clean_$(REFRESH)].[moh_clean].[pub_fund_hosp_discharges_diag] AS a
+INNER JOIN [IDI_Clean_$(REFRESH)].[moh_clean].[pub_fund_hosp_discharges_event] AS b
 ON [moh_dia_clinical_sys_code] = [moh_dia_submitted_system_code]
 AND [moh_evt_event_id_nbr]=[moh_dia_event_id_nbr]
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[moh_dia_clinical_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'ICD10'
@@ -310,7 +317,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[moh_dia_clinical_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'ICD9'
@@ -319,7 +326,7 @@ OR EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[moh_dia_clinical_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'external_cause'
@@ -334,9 +341,9 @@ PUBLIC HOSPITAL DISCHARGE
 SUBSTANCE ABUSE HEALTH SPECIALITY
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_multi] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_multi] (snz_uid, event_date)
 SELECT snz_uid, [moh_evt_evst_date]  as event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[pub_fund_hosp_discharges_event]
+FROM [IDI_Clean_$(REFRESH)].[moh_clean].[pub_fund_hosp_discharges_event]
 WHERE moh_evt_hlth_spec_code in ('Y40','Y41','Y42','Y43','Y44','Y45','Y46','Y47','Y48','Y49')
 GO
 
@@ -344,15 +351,15 @@ GO
 PRIMHD AND MHINC
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid, event_date)
 SELECT b.snz_uid
       ,[classification_start] AS event_date
 FROM [IDI_Adhoc].[clean_read_MOH_PRIMHD].[moh_primhd_mhinc] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[security].[concordance] AS b
+INNER JOIN [IDI_Clean_$(REFRESH)].[security].[concordance] AS b
 ON a.snz_moh_uid = b.snz_moh_uid 
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'ICD10'
@@ -361,7 +368,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'DSM'
@@ -370,7 +377,7 @@ OR EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'ICD9'
@@ -379,7 +386,7 @@ OR EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'external_cause'
@@ -392,27 +399,29 @@ GO
 PRIMHD TEAM
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_multi] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_multi] (snz_uid, event_date)
 SELECT [snz_uid]
       ,[moh_mhd_activity_start_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[PRIMHD]
-WHERE [moh_mhd_team_type_code] = 3
-OR [moh_mhd_team_code] IN () -- TO UPDATE
+FROM [IDI_Clean_$(REFRESH)].[moh_clean].[PRIMHD] AS p
+INNER JOIN [IDI_Metadata_$(REFRESH)].[moh_primhd].[team_code] AS m
+ON p.moh_mhd_team_code = m.TEAM_CODE
+WHERE [moh_mhd_team_type_code] = 3 -- alcohol and drug team
+OR LOWER(m.TEAM_NAME) LIKE '%drug%' -- team name apecifies alcohol
 
 /********************************************************
 PRIMHD DIAGNOSIS
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid, event_date)
 SELECT snz_uid
-      ,DATEFROMPARTS(SUBSTRING([CLASSIFICATION_START_DATE],7,4),SUBSTRING([CLASSIFICATION_START_DATE],4,2),SUBSTRING([CLASSIFICATION_START_DATE],1,2)) AS event_date
-FROM [IDI_Adhoc].[clean_read_MOH_PRIMHD].[primhd_diagnoses] AS a
-INNER JOIN [IDI_Clean_YYYYMM].[security].[concordance] AS b
+      ,[CLASSIFICATION_START_DATE] AS event_date
+FROM [IDI_Adhoc].[clean_read_MOH_PRIMHD].[primhd_diagnoses_202510] AS a
+INNER JOIN [IDI_Clean_$(REFRESH)].[security].[concordance] AS b
 ON a.snz_moh_uid = b.snz_moh_uid 
 
 WHERE EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'ICD10'
@@ -421,7 +430,7 @@ WHERE EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'DSM'
@@ -430,7 +439,7 @@ OR EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'ICD9'
@@ -439,7 +448,7 @@ OR EXISTS(
 )
 OR EXISTS(
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(a.[CLINICAL_CODE], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
 	AND r.code_type = 'DSM'
@@ -454,10 +463,10 @@ INTERRAI
 Alcohol- Highest number of drinks in any single sitting in LAST 14 DAYS / 5 or more
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid, event_date)
 SELECT [snz_uid]
 	,[moh_irai_assessment_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[moh_clean].[interrai]
+FROM [IDI_Clean_$(REFRESH)].[moh_clean].[interrai]
 WHERE moh_irai_alcohol_one_settng_code = 3 /* 5+ drinks */
 GO
 
@@ -465,29 +474,29 @@ GO
 SOCRATES
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid, event_date)
 SELECT b.snz_uid
 	  ,COALESCE(
-		CAST(SUBSTRING([FirstContactDate], 1, 7) AS DATE),
-		CAST(SUBSTRING([ReferralDate],1,7) AS DATE)
+		e.soc_referral_first_contact_date,
+		e.soc_referral_referral_date
 		) AS event_date
-FROM [IDI_Adhoc].[clean_read_MOH_SOCRATES].moh_disability AS a 
-INNER JOIN [IDI_Clean_YYYYMM].[security].[concordance] AS b 
+FROM [IDI_Clean_$(REFRESH)].[security].[concordance] AS b -- added so can use new tables in past refreshes to get 2022 data onward
+INNER JOIN [IDI_Clean_$(REFRESH)].[moh_clean].[socrates_disability] AS a 
 ON a.snz_moh_uid = b.snz_moh_uid
-INNER JOIN [IDI_Adhoc].[clean_read_MOH_SOCRATES].[moh_needs_assessment] AS c 
-ON a.snz_moh_uid = c.snz_moh_uid 
-LEFT JOIN [IDI_Adhoc].[clean_read_MOH_SOCRATES].[moh_referral] AS e 
-ON a.snz_moh_uid = e.snz_moh_uid
-WHERE a.[Code] = '1301'
+INNER JOIN [IDI_Clean_$(REFRESH)].[moh_clean].[socrates_needs_ass] AS c 
+ON c.snz_moh_uid = b.snz_moh_uid 
+LEFT JOIN [IDI_Clean_$(REFRESH)].[moh_clean].[socrates_referral] AS e 
+ON e.snz_moh_uid = b.snz_moh_uid
+WHERE a.soc_dis_code = '1301'
 
 /********************************************************
 MSD INCAPACITATION
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid, event_date)
 SELECT [snz_uid]
 	,[msd_incp_incp_from_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[msd_clean].[msd_incapacity]
+FROM [IDI_Clean_$(REFRESH)].[msd_clean].[msd_incapacity]
 WHERE [msd_incp_incrsn_code] IN ('006','171','172')
 OR [msd_incp_incrsn95_1_code] IN ('006','171','172')
 OR [msd_incp_incrsn95_2_code] IN ('006','171','172')
@@ -497,18 +506,18 @@ OR [msd_incp_incapacity_code] IN ('006','171','172')
 GO
 
 /********************************************************
-DRIVING DISQUALIFICATION
+DRUG RELATED CHARGES
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid, event_date)
 SELECT snz_uid, [moj_chg_offence_from_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[moj_clean].[charges] AS a
+FROM [IDI_Clean_$(REFRESH)].[moj_clean].[charges] AS a
 WHERE EXISTS (
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING(moj_chg_offence_code, 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
-	AND r.code_type = 'offences'
+	AND r.code_type = 'offence'
 )
 GO
 
@@ -516,15 +525,15 @@ GO
 POLICE NIA LINKS
 ********************************************************/
 
-INSERT INTO [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid, event_date)
+INSERT INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid, event_date)
 SELECT snz_uid, [nia_links_rec_date] AS event_date
-FROM [IDI_Clean_YYYYMM].[pol_clean].[nia_links] AS a
+FROM [IDI_Clean_$(REFRESH)].[pol_clean].[nia_links] AS a
 WHERE EXISTS (
 	SELECT 1
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[ref_diagnosis] AS r
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[ref_diagnosis] AS r
 	WHERE SUBSTRING([nia_links_latest_inc_off_code], 1, LEN(r.code)) = r.code
 	AND r.diagnosis = 'drug_abuse'
-	AND r.code_type = 'offences'
+	AND r.code_type = 'offence'
 )
 GO
 
@@ -533,28 +542,28 @@ FINAL TABLE CREATION
 ****************************************************************************************************************/
 
 /* Add indexes */
-CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] (snz_uid);
+CREATE NONCLUSTERED INDEX my_index_name ON [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] (snz_uid);
 GO
-CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_multi] (snz_uid);
+CREATE NONCLUSTERED INDEX my_index_name ON [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_multi] (snz_uid);
 GO
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_drug_abuse_or_dependence]
+DROP TABLE IF EXISTS [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[defn_mha_drug_abuse_or_dependence_$(REFRESH)]
 GO
 
 WITH multi_to_add AS (
 	SELECT snz_uid, event_date
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_multi] AS m
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_multi] AS m
 	WHERE EXISTS (
 		SELECT 1
-		FROM [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo] AS s
+		FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo] AS s
 		WHERE m.snz_uid = s.snz_uid
 	)
 )
 SELECT DISTINCT snz_uid, event_date
-INTO [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_drug_abuse_or_dependence]
+INTO [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[defn_mha_drug_abuse_or_dependence_$(REFRESH)]
 FROM (
 	SELECT snz_uid, event_date
-	FROM [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo]
+	FROM [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo]
 
 	UNION ALL
 
@@ -568,12 +577,14 @@ TIDY UP
 ********************************************************/
 
 /* Add index */
-CREATE NONCLUSTERED INDEX my_index_name ON [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_drug_abuse_or_dependence] (snz_uid);
+CREATE NONCLUSTERED INDEX my_index_name ON [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[defn_mha_drug_abuse_or_dependence_$(REFRESH)] (snz_uid);
 GO
 /* Compress final table to save space */
-ALTER TABLE [IDI_Sandpit].[DL-MAA20XX-YY].[defn_mha_drug_abuse_or_dependence] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);
-GO
+-- original / naive
+-- ALTER TABLE [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[defn_mha_drug_abuse_or_dependence_$(REFRESH)] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = PAGE);
+-- procedure / faster
+EXEC [IDI_UserCode].[$(PROJECT_SCHEMA)].[compress_table_$(PROJECT_DB)] @table = '[$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[defn_mha_drug_abuse_or_dependence_$(REFRESH)]'
 
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_solo]
-DROP TABLE IF EXISTS [IDI_Sandpit].[DL-MAA20XX-YY].[tmp_drug_multi]
+DROP TABLE IF EXISTS [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_solo]
+DROP TABLE IF EXISTS [$(PROJECT_DB)].[$(PROJECT_SCHEMA)].[tmp_drug_multi]
 GO
